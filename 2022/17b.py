@@ -91,7 +91,7 @@ def simulate(shapes, jets, rock_number, tower, initial_rock, initial_jet):
     :param tower: the tower of rocks before the simulation starts
     :param initial_rock: the index of the first rock to fall
     :param initial_jet: the index of the first gas jet to use
-    :returns: a tuple with the resulting tower, the last rock index and the last jet index
+    :returns: a tuple with the resulting tower, the next rock index and the next jet index
     """
     shapelen = len(shapes)
     movelen = len(jets)
@@ -101,19 +101,15 @@ def simulate(shapes, jets, rock_number, tower, initial_rock, initial_jet):
         shape = shapes[rock_index % shapelen]
         rock_index += 1
         shape_pos = spawn_rock(shape, tower)
-        #         print_simulation(shape, shape_pos, tower)
         while True:
             delta_x = jets[jet_index % movelen]
             jet_index += 1
             shape_pos = move_rock(shape, shape_pos, tower, delta_x)
-            #             print_simulation(shape, shape_pos, tower)
             new_pos = fall_rock(shape, shape_pos, tower)
             if new_pos == shape_pos:
                 tower = add_rock_to_tower(shape, new_pos, tower)
                 break
             shape_pos = new_pos
-            #             print_simulation(shape, shape_pos, tower)
-    #     print_simulation(shape, shape_pos, tower)
     return tower, rock_index, jet_index
 
 
