@@ -1,37 +1,14 @@
 import fileinput
-import time
+
+ORE, CLAY, OBS, GEODE = 0, 1, 2, 3
 
 
 def main():
     blueprints = get_blueprints()
-    #     print_debug_info(blueprints, 30)
-    #     qualities = get_qualities(blueprints, 32)
-    #     print(qualities)
     geodes = 1
     for blueprint in blueprints[:3]:
         geodes *= num_geodes(32, blueprint)
     print(geodes)
-
-
-def print_debug_info(blueprints, max_time):
-    for blueprint in blueprints:
-        for time_limit in range(max_time):
-            start = time.time()
-            geodes = num_geodes(time_limit, blueprint)
-            end = time.time()
-            print(time_limit, geodes, end - start)
-
-
-def get_qualities(blueprints, time):
-    qualities = 0
-    _id = 1
-    for blueprint in blueprints:
-        geodes = num_geodes(time, blueprint)
-        quality = _id * geodes
-        qualities += quality
-        print(_id, geodes)
-        _id += 1
-    return qualities
 
 
 def get_blueprints():
@@ -61,16 +38,12 @@ def get_blueprints():
     return blueprints
 
 
-ORE, CLAY, OBS, GEODE = 0, 1, 2, 3
-
-
-def num_geodes(time, robot_costs):
+def num_geodes(time_left, robot_costs):
     max_geodes = 0
     workers = (1, 0, 0, 0)
     resources = (0, 0, 0, 0)
-    time_left = time
     seen_at = {}
-    needed = robots_needed(robot_costs)
+    workers_needed = get_workers_needed(robot_costs)
     stack = [(time_left, workers, resources, [False] * 4)]
     while stack:
         state = stack.pop()
@@ -84,28 +57,28 @@ def num_geodes(time, robot_costs):
             continue
         if possible_geodes(time_left, workers, resources) <= max_geodes:
             continue
-        new_resources = add(workers, resources)
-        prevent_next_robots = [False] * 4
+        new_resources = collect_resources(workers, resources)
+        new_prevent_robots = [False] * 4
         for resource in [ORE, CLAY, OBS, GEODE]:
             if has_enough(resources, robot_costs[resource]):
-                prevent_next_robots[resource] = False if resource == GEODE else True
+                new_prevent_robots[resource] = False if resource == GEODE else True
                 if (
                     not prevent_robots[resource]
-                    and needed[resource] > workers[resource]
+                    and workers_needed[resource] > workers[resource]
                 ):
                     stack.append(
                         (
                             time_left - 1,
-                            increase(workers, resource),
-                            subtract(new_resources, robot_costs[resource]),
+                            add_new_worker(workers, resource),
+                            pay_cost(new_resources, robot_costs[resource]),
                             [False] * 4,
                         )
                     )
-        stack.append((time_left - 1, workers, new_resources, prevent_next_robots))
+        stack.append((time_left - 1, workers, new_resources, new_prevent_robots))
     return max_geodes
 
 
-def robots_needed(robot_costs):
+def get_workers_needed(robot_costs):
     return tuple(map(max, zip(*robot_costs)))[:3] + (float("inf"),)
 
 
@@ -113,15 +86,15 @@ def possible_geodes(time, workers, resources):
     """Maximum number of geodes from the current state. Assuming that each minute a new
     geode robot is created."""
     current_geodes = resources[GEODE]
-    robots = workers[GEODE]
-    return current_geodes + robots * time + (time - 1) * time // 2
+    current_robots = workers[GEODE]
+    return current_geodes + current_robots * time + (time - 1) * time // 2
 
 
-def increase(workers, kind):
+def add_new_worker(workers, kind):
     return workers[:kind] + (workers[kind] + 1,) + workers[kind + 1 :]
 
 
-def subtract(resources, cost):
+def pay_cost(resources, cost):
     def subtract_pair(pair):
         a, b = pair
         return a - b
@@ -130,10 +103,10 @@ def subtract(resources, cost):
 
 
 def has_enough(resources, cost):
-    return all(r >= 0 for r in subtract(resources, cost))
+    return all(r >= 0 for r in pay_cost(resources, cost))
 
 
-def add(workers, resources):
+def collect_resources(workers, resources):
     return tuple(map(sum, zip(workers, resources)))
 
 
