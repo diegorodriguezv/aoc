@@ -193,51 +193,35 @@ def start_edge_coordinates(face, side, side_length, _dir):
         return (top, right) if _dir != UP else (bottom, right)
 
 
-def find_edge_pairs(_map, side_length):
+def create_seams(_map, side_length):
     edges = wrapped_edges(face_map(_map, side_length))
-    pairs = {}
-    edge_pairs = []
+    paired = set()
+    seams = {}
     for (face, side), edge in edges.items():
         for (pair_face, pair_side), pair_edge in edges.items():
             if set(edge) == set(pair_edge) and pair_face != face:
                 break
-        if (pair_face, pair_side) in pairs:
+        if (pair_face, pair_side) in paired:
             continue
-        pairs[(face, side)] = (pair_face, pair_side)
-        dir1 = side_facing(side)
-        pos1 = start_edge_coordinates(face, side, side_length, dir1)
-        dir2 = side_facing(pair_side)
-        if edge != pair_edge:
-            dir2 = opposite_facing(dir2)
-        pos2 = start_edge_coordinates(pair_face, pair_side, side_length, dir2)
-        edge_pairs.append(
-            (
-                (pos1, dir1, opposite_facing(side)),
-                (pos2, dir2, opposite_facing(pair_side)),
-            )
-        )
-    return edge_pairs
-
-
-def create_seams(_map, side_length):
-    seams = {}
-    edge_pairs = find_edge_pairs(_map, side_length)
-    for (start1, facing1, nor1), (start2, facing2, nor2) in edge_pairs:
-        edge1 = []
+        paired.add((face, side))
+        facing1 = side_facing(side)
+        pos1 = start_edge_coordinates(face, side, side_length, facing1)
         dir1 = facing_direction(facing1)
-        pos1 = start1
-        for _ in range(side_length):
-            edge1.append(pos1)
-            pos1 = add_tuples(pos1, dir1)
-        edge2 = []
+        facing2 = side_facing(pair_side)
+        if edge != pair_edge:
+            facing2 = opposite_facing(facing2)
+        pos2 = start_edge_coordinates(pair_face, pair_side, side_length, facing2)
         dir2 = facing_direction(facing2)
-        pos2 = start2
+        print(NAME[side], face, NAME[facing1])
+        print(NAME[pair_side], pair_face, NAME[facing2])
+        print()
         for _ in range(side_length):
-            edge2.append(pos2)
+            seams[pos1, side] = pos2, opposite_facing(side)
+            seams[pos2, pair_side] = pos1, opposite_facing(pair_side)
+            pos1 = add_tuples(pos1, dir1)
             pos2 = add_tuples(pos2, dir2)
-        for e1, e2 in zip(edge1, edge2):
-            seams[e1, opposite_facing(nor1)] = e2, nor2
-            seams[e2, opposite_facing(nor2)] = e1, nor1
+    pprint.pp(seams)
+    print(len(seams))
     return seams
 
 
